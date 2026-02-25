@@ -3,6 +3,7 @@
 #define CHEF_H
 #include "order.h"
 #include "logger.h"
+#include "warehouse.h"
 #include <vector>
 
 class ChefManager
@@ -44,7 +45,7 @@ class Chef
 public:
 	bool systemStatus = true;
 	
-	void waitOrder(OrderQueue &orderQueue, ChefManager &chefIdManager, PaymentQueue& payQueue)
+	void waitOrder(OrderQueue &orderQueue, ChefManager &chefIdManager, PaymentQueue& payQueue, Warehouse& item)
 	{
 		Order order;
 		
@@ -67,19 +68,19 @@ public:
 			switch (order.type)
 			{
 				case Menu::PIZZA:
-					prepareOrder(chefId, order.tableId, order.type);
+					prepareOrder(chefId, order.tableId, order.type, item);
 					break;
 
 				case Menu::PASTA:
-					prepareOrder(chefId, order.tableId, order.type);
+					prepareOrder(chefId, order.tableId, order.type, item);
 					break;
 
 				case Menu::STEAK:
-					prepareOrder(chefId, order.tableId, order.type);
+					prepareOrder(chefId, order.tableId, order.type, item);
 					break;
 
 				case Menu::SOUP:
-					prepareOrder(chefId, order.tableId, order.type);
+					prepareOrder(chefId, order.tableId, order.type, item);
 					break;
 			}
 
@@ -91,7 +92,7 @@ public:
 		}		
 	}
 
-	void prepareOrder(int chefId, int tableId, Menu foodType)
+	void prepareOrder(int chefId, int tableId, Menu foodType, Warehouse& warehouse)
 	{
 		std::string foodName = Logger::menuToString(foodType);
 		int prepTime = 0;
@@ -100,15 +101,39 @@ public:
 		{
 			case Menu::PIZZA:
 				prepTime = 4;
+				if (warehouse.useIngredients(foodType) == false)
+				{
+					Logger::log("Not enough ingredients for pizza, restocking...");
+					warehouse.restock(foodType);
+					warehouse.useIngredients(foodType);
+				}
 				break;
 			case Menu::PASTA:
 				prepTime = 3;
+				if (warehouse.useIngredients(foodType) == false)
+				{
+					Logger::log("Not enough ingredients for pasta, restocking...");
+					warehouse.restock(foodType);
+					warehouse.useIngredients(foodType);
+				}
 				break;
 			case Menu::STEAK:
 				prepTime = 5;
+				if (warehouse.useIngredients(foodType) == false)
+				{
+					Logger::log("Not enough ingredients for steak, restocking...");
+					warehouse.restock(foodType);
+					warehouse.useIngredients(foodType);
+				}
 				break;
 			case Menu::SOUP:
 				prepTime = 2;
+				if (warehouse.useIngredients(foodType) == false)
+				{
+					Logger::log("Not enough ingredients for soup, restocking...");
+					warehouse.restock(foodType);
+					warehouse.useIngredients(foodType);
+				}
 				break;
 			default:
 				return;

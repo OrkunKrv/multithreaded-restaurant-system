@@ -7,6 +7,7 @@
 #include "waiter.h"
 #include "cashier.h"
 #include "menu.h"
+#include "warehouse.h"
 
 #ifndef RESTAURANTMANAGER_H
 #define RESTAURANTMANAGER_H
@@ -22,6 +23,7 @@ protected:
 	ChefManager chefManager;
 	Chef chef;
 	Waiter waiter;
+	Warehouse warehouse;
 	Menu menu;
 	std::atomic<bool> isRunning{ true };
 	std::atomic<int> globalOrderId{ 1 };
@@ -34,7 +36,7 @@ public:
 		std::cout << "Starting the restaurant management system..." << std::endl;
 		for (int i = 0; i < 5; ++i)
 		{
-			std::thread chefThread(&Chef::waitOrder, &chef, std::ref(orderQueue), std::ref(chefManager), std::ref(payQueue));
+			std::thread chefThread(&Chef::waitOrder, &chef, std::ref(orderQueue), std::ref(chefManager), std::ref(payQueue), std::ref(warehouse));
 			systemThreads.push_back(std::move(chefThread)); //move the thread into the vector to avoid copying
 		}
 		for (int i = 0; i < 5; ++i)
