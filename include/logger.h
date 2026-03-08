@@ -10,12 +10,30 @@
 
 class Logger
 {
+private:
+	static inline std::deque<std::string> logHistory;
+	static inline std::mutex logMutex;
+	static inline const size_t MAX_LOG_HISTORY = 15; // Limit the log history to the most recent 15 entries
+
 public:
-	static void log(const std::string& message)
+	// Function to log a message with thread safety and maintain a history of logs
+	static void log(const std::string& message) 
 	{
-		static std::mutex logMutex;
 		std::lock_guard<std::mutex> lock(logMutex);
-		std::cout << message << std::endl;
+
+		logHistory.push_back(message);
+
+		if (logHistory.size() > MAX_LOG_HISTORY)
+		{
+			logHistory.pop_front(); // Remove the oldest log entry to maintain the size limit
+		}
+	}
+
+	// Function to retrieve the current log history
+	std::vector<std::string> getLogHistory() 
+	{
+		std::lock_guard<std::mutex> lock(logMutex); 
+		return std::vector<std::string>(logHistory.begin(), logHistory.end());
 	}
 
 	static std::string menuToString(Menu m) 
@@ -41,8 +59,6 @@ public:
 
 class FileLogger
 {
-private:
-
 public:
 	static inline std::mutex m_fileMutex;
 

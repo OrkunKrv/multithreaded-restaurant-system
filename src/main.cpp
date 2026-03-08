@@ -1,6 +1,6 @@
 #include <iostream>
 #include "restaurantManager.h"
-//next to do --> inventory management, subfoods for each menu item  
+
 int main()
 {
 	srand(time(0)); 
@@ -9,8 +9,12 @@ int main()
 	restaurantManager.startSystem();
 
 	std::this_thread::sleep_for(std::chrono::seconds(5));
-
-	restaurantManager.stopSystem();
+	std::cout << "Press Enter to stop the system..." << std::endl;
+	char quit = std::cin.get();
+	if (quit == '\n')
+	{
+		restaurantManager.stopSystem();
+	}
 
 	return 0;
 }

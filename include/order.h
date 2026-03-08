@@ -15,6 +15,7 @@ struct Order
 	Menu type = Menu::BLANK;
 	int tableId = 0;
 	int customerPayment = 0;
+	std::chrono::steady_clock::time_point orderTime;
 };
 
 class OrderQueue
@@ -32,12 +33,19 @@ public:
 		cond_variable.notify_one(); // Notify one waiting thread
 	}
 
-	void popOrder(Order& order)
+	bool popOrder(Order& order, std::atomic<bool>& isRunning)
 	{
 		std::unique_lock<std::mutex> lock(m_mutex); // Lock the mutex for thread safety
-		cond_variable.wait(lock, [this]() { return !orders.empty(); }); // Wait until there is an order
+		cond_variable.wait(lock, [this, &isRunning]() { return !orders.empty() || !isRunning; }); // Wait until there is an order
+
+		if(!isRunning && orders.empty())
+		{
+			return false; 
+		}
 		order = orders.front(); // Retrieve the order
 		orders.pop(); // Remove the order from the queue
+
+		return true;
 	}
 
 	bool orderQueueEmpty()
@@ -45,6 +53,11 @@ public:
 		std::lock_guard<std::mutex> lock(m_mutex); 
 
 		return orders.empty();
+	}
+
+	void wakeUpChefs()
+	{
+		cond_variable.notify_all(); 
 	}
 };
 
@@ -63,12 +76,25 @@ public:
 		payment_variable.notify_one();
 	}
 
-	void paymentDone(Order& payment)
+	bool paymentDone(Order& payment, std::atomic<bool>& isRunning)
 	{
 		std::unique_lock<std::mutex> lock(paymentMutex);
-		payment_variable.wait(lock, [this]() {return !paymentQueue.empty(); });
+		payment_variable.wait(lock, [this, &isRunning]() {return !paymentQueue.empty() || !isRunning; });
+
+		if (!isRunning && paymentQueue.empty())
+		{
+			return false;
+		}
+
 		payment = paymentQueue.front();
 		paymentQueue.pop();
+
+		return true;
+	}
+
+	void wakeUpCashier()
+	{
+		payment_variable.notify_all();
 	}
 };
 

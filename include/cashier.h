@@ -7,36 +7,29 @@
 class Cashier
 {
 public:
-	void paymentProccess(PaymentQueue& payQueue, std::atomic<bool>& isRunning, std::atomic<int>& totalRevenue)
+	void paymentProccess(PaymentQueue& payQueue, std::atomic<bool>& isRunning, std::atomic<int>& totalRevenue, std::atomic<long long>& totalDur, std::atomic<int>& completedOrders, std::atomic<int>* tableStates)
 	{
 		Order finishedOrder;
-
 		while (isRunning)
 		{
-			switch (finishedOrder.type)
+			if (!payQueue.paymentDone(finishedOrder, isRunning))
 			{
-				case Menu::PIZZA:
-					std::this_thread::sleep_for(std::chrono::seconds(5));
-					break;
-				case Menu::PASTA:
-					std::this_thread::sleep_for(std::chrono::seconds(3));
-					break;
-				case Menu::STEAK:
-					std::this_thread::sleep_for(std::chrono::seconds(6));
-					break;
-				case Menu::SOUP:
-					std::this_thread::sleep_for(std::chrono::seconds(2));
-					break;
+				break;
 			}
 
-			payQueue.paymentDone(finishedOrder);
 			std::this_thread::sleep_for(std::chrono::seconds(2));
+			auto finishTime = std::chrono::steady_clock::now();
+
+			auto duration = std::chrono::duration_cast<std::chrono::seconds>(finishTime - finishedOrder.orderTime);
+			totalDur.fetch_add(duration.count());
+			completedOrders.fetch_add(1);
 
 			int currentRev = totalRevenue.fetch_add(finishedOrder.customerPayment) + finishedOrder.customerPayment;
 
 			std::stringstream ssPaymentDone;
-			ssPaymentDone << finishedOrder.customerPayment << "$ payment from table " << finishedOrder.tableId << " - Current Revenue: " << currentRev << "$" << std::endl;
+			ssPaymentDone << finishedOrder.customerPayment << "$ payment from table " << finishedOrder.tableId << " - Current Revenue: " << currentRev << "$";
 			Logger::log(ssPaymentDone.str());
+			tableStates[finishedOrder.tableId].store(0);
 		}
 	}
 };

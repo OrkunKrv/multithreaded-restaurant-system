@@ -43,26 +43,27 @@ public:
 class Chef
 {
 public:
-	bool systemStatus = true;
-	
-	void waitOrder(OrderQueue &orderQueue, ChefManager &chefIdManager, PaymentQueue& payQueue, Warehouse& item)
+	void waitOrder(OrderQueue &orderQueue, ChefManager &chefIdManager, PaymentQueue& payQueue, Warehouse& item, std::atomic<bool>& isRunning, std::atomic<int>* tableStates)
 	{
 		Order order;
 		
-		while (systemStatus)
+		while (isRunning)
 		{
 			int chefId = chefIdManager.getChefID();
 
 			if (orderQueue.orderQueueEmpty())
 			{
 				std::stringstream ssWaiting;
-				ssWaiting << "Chef " << chefId <<  " is waiting for orders..." << std::endl;
+				ssWaiting << "Chef " << chefId <<  " is waiting for orders...";
 				Logger::log(ssWaiting.str());
 			}
 
-			orderQueue.popOrder(order);
+			if (!orderQueue.popOrder(order, isRunning)) 
+			{
+				break; 
+			}
 			std::stringstream ssOrder;
-			ssOrder << "Chef " << chefId << " received " << Logger::menuToString(order.type) << " order for table " << order.tableId << ". Order ID: " << order.id << std::endl;
+			ssOrder << "Chef " << chefId << " received " << Logger::menuToString(order.type) << " order for table " << order.tableId << ". Order ID: " << order.id;
 			Logger::log(ssOrder.str());
 
 			switch (order.type)
@@ -84,8 +85,9 @@ public:
 					break;
 			}
 
+			tableStates[order.tableId].store(2);
 			std::stringstream ssDone;
-			ssDone << "Chef " << chefId << " has finished preparing " << Logger::menuToString(order.type) << " for table " << order.tableId << ". Order ID: " << order.id << std::endl;
+			ssDone << "Chef " << chefId << " has finished preparing " << Logger::menuToString(order.type) << " for table " << order.tableId << ". Order ID: " << order.id;
 			Logger::log(ssDone.str());
 			payQueue.paymentProccess(order);
 			chefIdManager.releaseChefID(chefId);
@@ -140,7 +142,7 @@ public:
 		}
 
 		std::stringstream ss;
-		ss << "Chef " << chefId << " is preparing a " << foodName << " for table " << tableId << std::endl;
+		ss << "Chef " << chefId << " is preparing a " << foodName << " for table " << tableId;
 		Logger::log(ss.str());
 		std::this_thread::sleep_for(std::chrono::seconds(prepTime));
 	}

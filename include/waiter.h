@@ -10,7 +10,7 @@
 class Waiter
 {
 public:
-	void takeOrder(OrderQueue &orderQueue, std::atomic<bool>& isRunning, std::atomic<int>& globalOrderId, Menu& foodType)
+	void takeOrder(OrderQueue &orderQueue, std::atomic<bool>& isRunning, std::atomic<int>& globalOrderId, Menu& foodType, Order& order, std::atomic<int>* tableStates)
 	{
 		std::random_device rd;
 		std::mt19937 gen(rd());
@@ -31,11 +31,12 @@ public:
 			if (!isRunning) break;
 
 			std::stringstream ssWaiting;
-			ssWaiting << "Waiter is taking an order..." << std::endl;
+			ssWaiting << "Waiter is taking an order...";
 			Logger::log(ssWaiting.str());
 	
 			std::stringstream ssTake;
-			ssTake << "Waiter took an order for: " << Logger::menuToString(randomFood) << ", from table " << currentTableId << ", ID: " << recentOrderId << std::endl;
+			ssTake << "Waiter took an order for: " << Logger::menuToString(randomFood) << ", from table " << currentTableId << ", ID: " << recentOrderId;
+
 			Logger::log(ssTake.str());
 			FileLogger::logToFile(ssTake.str());	
 
@@ -57,7 +58,17 @@ public:
 				customerPayment = 5;
 				break;
 			}
-			orderQueue.pushOrder({ recentOrderId, randomFood, currentTableId, customerPayment });
+
+			Order newOrder;
+
+			newOrder.id = recentOrderId;
+			newOrder.type = randomFood;
+			newOrder.tableId = currentTableId;
+			newOrder.customerPayment = customerPayment;
+			tableStates[currentTableId].store(1);
+
+			newOrder.orderTime = std::chrono::steady_clock::now();
+			orderQueue.pushOrder(newOrder);
 
 			if (globalOrderId.load() > 10)
 			{
@@ -67,11 +78,12 @@ public:
 				if (globalOrderId <= 1) { return; } 
 
 				std::stringstream ssFull;
-				ssFull << "Kitchen is full. Please wait..." << std::endl;
+				ssFull << "Kitchen is full. Please wait..."; 
 				Logger::log(ssFull.str());
 				std::this_thread::sleep_for(std::chrono::seconds(5));
 				globalOrderId.store(1);
 			}
+
 		}
 	}
 };
